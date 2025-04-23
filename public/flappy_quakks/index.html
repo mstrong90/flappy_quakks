@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Flappy Quakks</title>
+  <link rel="stylesheet" href="/flappy_quakks/style.css" />
+</head>
+<body>
+  <!-- 
+    We force the canvas to render at its native resolution,
+    then pixelate it for that retro feel.
+  -->
+  <canvas
+    id="gameCanvas"
+    width="288"
+    height="512"
+    style="width:288px; height:512px; image-rendering: pixelated;"
+  ></canvas>
+
+  <!-- Telegram Game SDK -->
+  <script async src="https://telegram.org/js/telegram-web-app.js"></script>
+  <!-- Our updated game logic -->
+  <script src="/flappy_quakks/script.js"></script>
+</body>
+</html>
