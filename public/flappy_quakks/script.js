@@ -14,7 +14,7 @@ const GRAVITY    = 900;    // px/s²
 const FLAP_V     = -200;   // px/s
 const PIPE_SPEED = 200;    // px/s
 const SPAWN_INT  = 1.5;    // s between pipes
-const PIPE_GAP   = 200;    // px gap
+const PIPE_GAP   = 175;    // px gap
 
 // — Asset paths
 const PATH = 'assets/';
@@ -44,7 +44,7 @@ let baseX      = 0;
 let topList    = [];
 
 // — Duck
-const BIRD_W     = 34, BIRD_H = 24, BIRD_SCALE = 1.5;
+const BIRD_W     = 34, BIRD_H = 24, BIRD_SCALE = 1.8;
 const bird = {
   x:      WIDTH * 0.2,
   y:      (HEIGHT - BIRD_H * BIRD_SCALE) / 2,
