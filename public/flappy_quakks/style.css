@@ -1,12 +1,21 @@
-body, html {
+html, body {
   margin: 0;
   padding: 0;
   background: #70c5ce;
+  height: 100vh;
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 100vh;
+
+  /* disable pinch-zoom, double-tap zoom, overscroll, text selection */
+  touch-action: manipulation;
+  overscroll-behavior: none;
+  user-select: none;
 }
+
 canvas {
   border: 2px solid #000;
+
+  /* block all touch gestures on the canvas itself */
+  touch-action: none;
 }
