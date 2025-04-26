@@ -1,30 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <!-- lock viewport scale -->
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
-  />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
   <title>Flappy Quakks</title>
-
-  <!-- ensure relative paths resolve under /flappy_quakks/ -->
-  <base href="/flappy_quakks/" />
-
-  <link rel="stylesheet" href="style.css" />
+  <base href="/flappy_quakks/">
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <canvas
-    id="gameCanvas"
-    width="288"
-    height="512"
-    style="width:288px; height:512px; image-rendering: pixelated;"
-  ></canvas>
-
-  <!-- Telegram Game SDK -->
+  <canvas id="gameCanvas"></canvas>
   <script async src="https://telegram.org/js/telegram-web-app.js"></script>
-  <!-- game logic -->
   <script src="script.js"></script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'93630042ce0a4554',t:'MTc0NTYzODIyMS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script>
 </body>
 </html>

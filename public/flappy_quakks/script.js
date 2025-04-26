@@ -5,19 +5,49 @@ console.log('✅ script.js loaded');
 // — Canvas & context
 const canvas = document.getElementById('gameCanvas');
 const ctx    = canvas.getContext('2d');
-const WIDTH  = canvas.width;
-const HEIGHT = canvas.height;
+
+// — Dynamic canvas sizing
+let WIDTH, HEIGHT;
+function resizeCanvas() {
+  const dpr = window.devicePixelRatio || 1;
+  WIDTH = window.innerWidth;
+  HEIGHT = window.innerHeight;
+  canvas.width = WIDTH * dpr;
+  canvas.height = HEIGHT * dpr;
+  canvas.style.width = `${WIDTH}px`;
+  canvas.style.height = `${HEIGHT}px`;
+  ctx.scale(dpr, dpr); // Adjust for high-DPI displays
+  console.log('Canvas resized:', WIDTH, HEIGHT, 'dpr:', dpr);
+  
+  // Update button positions and bird position for new dimensions
+  Btn.start.x = WIDTH/2 - 75;
+  Btn.start.y = HEIGHT * 0.6;
+  Btn.leaderboard.x = WIDTH/2 - 75;
+  Btn.leaderboard.y = HEIGHT * 0.7;
+  bird.x = WIDTH * 0.2;
+  bird.y = (HEIGHT - bird.h) / 2;
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+// — Telegram Web App full-screen
+if (window.Telegram?.WebApp) {
+  Telegram.WebApp.expand();
+  Telegram.WebApp.setBackgroundColor('#000000');
+  Telegram.WebApp.onEvent('viewportChanged', resizeCanvas);
+  console.log('Telegram Web App expanded');
+}
 
 // — Game constants
 const FPS           = 30;
 const GRAVITY       = 900;    // px/s²
 const FLAP_V        = -200;   // px/s
-const PIPE_SPEED    = 200;    // px/s
-const SPAWN_INT     = 1.5;    // seconds between pipes
-const PIPE_GAP      = 180;    // px (you’d shrank this earlier)
+let PIPE_SPEED      = 200;    // px/s
+let SPAWN_INT       = 1.5;    // seconds between pipes
+let PIPE_GAP        = 180;    // px
 const HITBOX_PADDING = 4;     // px inset for collision boxes
 
-// — Asset paths (same as before)
+// — Asset paths
 const PATH = 'assets/';
 const SPRITES = {
   bg:    [PATH+'sprites/background-day.png', PATH+'sprites/background-night.png'],
@@ -32,17 +62,19 @@ const SOUNDS = {
   die:   PATH+'audio/die.ogg',
   hit:   PATH+'audio/hit.ogg',
   point: PATH+'audio/point.ogg',
-  wing:  PATH+'audio/wing.ogg'
+  wing: PATH+'audio/wing.ogg'
 };
 
 // — State
-let state      = 'WELCOME';   // WELCOME → LEADERBOARD → PLAY → GAMEOVER
+let state      = 'WELCOME';
 let lastTime   = 0;
 let spawnTimer = 0;
 let score      = 0;
 let pipes      = [];
 let baseX      = 0;
 let topList    = [];
+let lastDifficultyScore = 0;
+let difficultyCycle = 0;
 
 // — Duck (10% bigger: 1.65 scale)
 const BIRD_W     = 34, BIRD_H = 24, BIRD_SCALE = 1.65;
@@ -63,11 +95,11 @@ let loadedImages = 0;
 const TOTAL_IMAGES =
   SPRITES.bg.length +
   SPRITES.pipe.length +
-  1 +                  // base
+  1 +
   SPRITES.bird.length +
   SPRITES.nums.length +
-  1 +                  // message
-  1;                   // gameover
+  1 +
+  1;
 
 // — Helpers
 function randInt(min,max){ return Math.floor(min + Math.random()*(max-min+1)); }
@@ -82,43 +114,51 @@ function intersect(a,b){
 SPRITES.bg.forEach((url,i)=>{
   const img=new Image(); img.src=url;
   img.onload = ()=>{ IMG.bg[i]=img; if(++loadedImages===TOTAL_IMAGES) init(); };
+  img.onerror = () => console.error('Failed to load:', url);
 });
 SPRITES.pipe.forEach((url,i)=>{
   const img=new Image(); img.src=url;
   img.onload = ()=>{ IMG.pipe[i]=img; if(++loadedImages===TOTAL_IMAGES) init(); };
+  img.onerror = () => console.error('Failed to load:', url);
 });
 {
   const img=new Image(); img.src=SPRITES.base;
   img.onload = ()=>{ IMG.base=img; if(++loadedImages===TOTAL_IMAGES) init(); };
+  img.onerror = () => console.error('Failed to load:', SPRITES.base);
 }
 SPRITES.bird.forEach((url,i)=>{
   const img=new Image(); img.src=url;
   img.onload = ()=>{ IMG.bird[i]=img; if(++loadedImages===TOTAL_IMAGES) init(); };
+  img.onerror = () => console.error('Failed to load:', url);
 });
 SPRITES.nums.forEach((url,i)=>{
   const img=new Image(); img.src=url;
   img.onload = ()=>{ IMG.nums[i]=img; if(++loadedImages===TOTAL_IMAGES) init(); };
+  img.onerror = () => console.error('Failed to load:', url);
 });
 {
   const m=new Image(), o=new Image();
   m.src=SPRITES.msg; o.src=SPRITES.over;
   m.onload = ()=>{ IMG.msg=m; if(++loadedImages===TOTAL_IMAGES) init(); };
   o.onload = ()=>{ IMG.over=o; if(++loadedImages===TOTAL_IMAGES) init(); };
+  m.onerror = () => console.error('Failed to load:', SPRITES.msg);
+  o.onerror = () => console.error('Failed to load:', SPRITES.over);
 }
 
-// — Load sounds (non-blocking)
+// — Load sounds
 Object.entries(SOUNDS).forEach(([k,u])=>{
   const a=new Audio(u); a.load(); AUD[k]=a;
 });
 
-// — Called once everything’s loaded
+// — Init
 function init(){
+  console.log('Assets loaded:', loadedImages, 'of', TOTAL_IMAGES);
   drawWelcome();
   lastTime = performance.now();
   setInterval(gameLoop, 1000/FPS);
 }
 
-// — Pipe creation (random Y between 20%–80%)
+// — Pipe creation
 function createPipe(x){
   const margin = Math.floor(HEIGHT * 0.2);
   const minY   = margin;
@@ -132,6 +172,7 @@ function spawnInitial(){
   pipes.push(createPipe(fx), createPipe(fx + pw*3.5));
 }
 function spawnPipe(){
+  console.log('Spawning pipe, pipes.length:', pipes.length, 'SPAWN_INT:', SPAWN_INT);
   pipes.push(createPipe(WIDTH + 10));
 }
 
@@ -144,8 +185,11 @@ function isInside(mx,my,b){
   return mx>=b.x && mx<=b.x+b.w && my>=b.y && my<=b.y+b.h;
 }
 
-// — Input: pointerdown + spacebar
+// — Input
 canvas.addEventListener('pointerdown', handlePointer, { passive:false });
+canvas.addEventListener('touchstart', e => {
+  e.preventDefault();
+}, { passive: false });
 document.addEventListener('keydown', e=>{
   if (e.code==='Space' && state==='PLAY') {
     bird.flapped = true;
@@ -164,8 +208,8 @@ function handlePointer(e){
     clientY = e.clientY;
   }
   const rect = canvas.getBoundingClientRect();
-  const mx   = clientX - rect.left;
-  const my   = clientY - rect.top;
+  const mx   = (clientX - rect.left) * (WIDTH / rect.width);
+  const my   = (clientY - rect.top) * (HEIGHT / rect.height);
 
   if (state==='WELCOME'){
     if      (isInside(mx,my,Btn.start))       startPlay();
@@ -174,7 +218,7 @@ function handlePointer(e){
   else if (state==='PLAY'){
     bird.flapped = true;
   }
-  else { // LEADERBOARD or GAMEOVER
+  else {
     state = 'WELCOME';
     drawWelcome();
   }
@@ -182,19 +226,19 @@ function handlePointer(e){
 
 // — DRAW WELCOME
 function drawWelcome(){
-  ctx.drawImage(IMG.bg[0],0,0);
+  ctx.drawImage(IMG.bg[0], 0, 0, WIDTH, HEIGHT);
   tileBase();
-  ctx.drawImage(IMG.msg,(WIDTH-IMG.msg.width)/2,HEIGHT*0.12);
+  ctx.drawImage(IMG.msg, (WIDTH-IMG.msg.width)/2, HEIGHT*0.12);
   bird.frame = (bird.frame+1)%3;
   const shim = 8 * Math.sin(performance.now()/200);
   ctx.drawImage(IMG.bird[bird.frame], bird.x, bird.y+shim, bird.w, bird.h);
   [Btn.start, Btn.leaderboard].forEach(b=>{
-    ctx.fillStyle='#fff'; ctx.fillRect(b.x,b.y,b.w,b.h);
-    ctx.fillStyle='#000'; ctx.font='20px Arial';
+    ctx.fillStyle='#fff'; ctx.fillRect(b.x, b.y, b.w, b.h);
+    ctx.fillStyle='#000'; ctx.font=`${20 * (WIDTH/288)}px Arial`;
     ctx.fillText(
       b.label,
       b.x + (b.w/2 - ctx.measureText(b.label).width/2),
-      b.y+32
+      b.y + 32 * (WIDTH/288)
     );
   });
 }
@@ -211,15 +255,15 @@ async function fetchLeaderboard(){
   }
 }
 function drawLeaderboard(){
-  ctx.drawImage(IMG.bg[1],0,0);
-  ctx.fillStyle='rgba(0,0,0,0.7)'; ctx.fillRect(0,0,WIDTH,HEIGHT);
-  ctx.fillStyle='#fff'; ctx.font='24px Arial';
-  ctx.fillText('🏆 Top 10', WIDTH/2-50,50);
-  ctx.font='18px Arial';
+  ctx.drawImage(IMG.bg[1], 0, 0, WIDTH, HEIGHT);
+  ctx.fillStyle='rgba(0,0,0,0.7)'; ctx.fillRect(0, 0, WIDTH, HEIGHT);
+  ctx.fillStyle='#fff'; ctx.font=`${24 * (WIDTH/288)}px Arial`;
+  ctx.fillText('🏆 Top 10', WIDTH/2-50, 50);
+  ctx.font=`${18 * (WIDTH/288)}px Arial`;
   topList.forEach((e,i)=>{
     ctx.fillText(`${i+1}. ${e.username}: ${e.score}`, 30, 100+i*30);
   });
-  ctx.fillText('Tap to go back', WIDTH/2-60, HEIGHT-40);
+  ctx.fillText('Tap to go back', WIDTH/ usually-60, HEIGHT-40);
 }
 
 // — START PLAY
@@ -228,14 +272,21 @@ function startPlay(){
   score     = 0;
   bird.vy   = 0;
   bird.y    = (HEIGHT - bird.h)/2;
-  spawnTimer= -SPAWN_INT; // delay first pipe
+  bird.x    = WIDTH * 0.2;
+  spawnTimer= -SPAWN_INT;
   lastTime  = performance.now();
+  lastDifficultyScore = 0;
+  difficultyCycle = 0;
+  PIPE_GAP = 180;
+  PIPE_SPEED = 200;
+  SPAWN_INT = 1.5;
   spawnInitial();
   AUD.wing.play();
 }
 
 // — MAIN LOOP
 function gameLoop(){
+  console.log('Game loop, state:', state, 'score:', score);
   if (state==='PLAY'){
     updatePlay();
     drawPlay();
@@ -247,18 +298,32 @@ function updatePlay(){
   const now = performance.now(), dt=(now-lastTime)/1000;
   lastTime = now;
 
+  if (score >= 25 && score % 25 === 0 && score > lastDifficultyScore && !pipes.some(p => p.scored === false)) {
+    console.log('Adjusting difficulty at score:', score, 'cycle:', difficultyCycle);
+    if (difficultyCycle % 3 === 0) {
+      PIPE_GAP = Math.max(100, PIPE_GAP - 10);
+      console.log('Adjusted PIPE_GAP to:', PIPE_GAP);
+    } else if (difficultyCycle % 3 === 1) {
+      PIPE_SPEED = Math.min(400, PIPE_SPEED + 20);
+      console.log('Adjusted PIPE_SPEED to:', PIPE_SPEED);
+    } else {
+      SPAWN_INT = Math.max(0.5, SPAWN_INT - 0.1);
+      console.log('Adjusted SPAWN_INT to:', SPAWN_INT);
+    }
+    difficultyCycle++;
+    lastDifficultyScore = score;
+  }
+
   spawnTimer += dt;
   if (spawnTimer >= SPAWN_INT){
     spawnPipe();
     spawnTimer -= SPAWN_INT;
   }
 
-  // move & filter
   const pv = PIPE_SPEED * dt;
   pipes.forEach(p=>p.x -= pv);
   pipes = pipes.filter(p=> p.x + IMG.pipe[0].width > 0);
 
-  // duck physics
   bird.vy += GRAVITY * dt;
   if (bird.flapped){
     bird.vy = FLAP_V;
@@ -267,12 +332,10 @@ function updatePlay(){
   }
   bird.y += bird.vy * dt;
 
-  // crash ceiling/floor
   if (bird.y<0 || bird.y+bird.h>HEIGHT*0.79){
     return handleGameOver();
   }
 
-  // collisions & scoring (with padding)
   pipes.forEach(p=>{
     const pw = IMG.pipe[0].width, ph = IMG.pipe[0].height;
     const topR = {
@@ -295,6 +358,7 @@ function updatePlay(){
     };
 
     if (intersect(birdR, topR) || intersect(birdR, botR)){
+      console.log('Collision detected at score:', score, 'PIPE_GAP:', PIPE_GAP);
       return handleGameOver();
     }
     if (!p.scored && p.x + pw < bird.x){
@@ -307,28 +371,24 @@ function updatePlay(){
 
 // — DRAW PLAY
 function drawPlay(){
-  ctx.drawImage(IMG.bg[1],0,0);
+  ctx.drawImage(IMG.bg[1], 0, 0, WIDTH, HEIGHT);
   pipes.forEach(p=>{
     const pw=IMG.pipe[0].width, ph=IMG.pipe[0].height;
-    // top (flipped)
     ctx.save();
     ctx.translate(p.x + pw/2, p.y);
     ctx.scale(1, -1);
     ctx.drawImage(IMG.pipe[0], -pw/2, 0);
     ctx.restore();
-    // bottom
     ctx.drawImage(IMG.pipe[0], p.x, p.y + PIPE_GAP);
   });
 
-  // duck
   ctx.drawImage(IMG.bird[bird.frame], bird.x, bird.y, bird.w, bird.h);
 
-  // score
   let totalW = 0, digits = Array.from(String(score), Number);
   digits.forEach(d=> totalW += IMG.nums[d].width);
   let x0 = (WIDTH - totalW)/2;
   digits.forEach(d=>{
-    ctx.drawImage(IMG.nums[d], x0, 20);
+    ctx.drawImage(IMG.nums[d], x0, 20 * (WIDTH/288));
     x0 += IMG.nums[d].width;
   });
 
@@ -344,7 +404,7 @@ function tileBase(){
   }
 }
 
-// — GAME OVER → submit & leaderboard
+// — GAME OVER
 async function handleGameOver(){
   if (state!=='PLAY') return;
   state='GAMEOVER';

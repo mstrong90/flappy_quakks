@@ -1,21 +1,22 @@
 html, body {
   margin: 0;
   padding: 0;
-  background: #70c5ce;
-  height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-
-  /* disable pinch-zoom, double-tap zoom, overscroll, text selection */
-  touch-action: manipulation;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: black; /* Fallback if canvas fails */
+  touch-action: none; /* Prevent pinch/zoom/scroll */
   overscroll-behavior: none;
   user-select: none;
 }
 
 canvas {
-  border: 2px solid #000;
-
-  /* block all touch gestures on the canvas itself */
-  touch-action: none;
+  display: block;
+  width: 100vw;
+  height: 100vh;
+  position: fixed;
+  top: 0;
+  left: 0;
+  touch-action: none; /* Prevent touch scrolling */
+  image-rendering: pixelated; /* Retain pixel art style */
 }
