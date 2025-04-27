@@ -1,19 +1,18 @@
 // bot.js
 
 require('dotenv').config();
-
 const express     = require('express');
 const path        = require('path');
 const fs          = require('fs');
 const TelegramBot = require('node-telegram-bot-api');
 
-// ── Config from .env ───────────────────────────────────────────────────────────
+// ── Config ───────────────────────────────────────────────────────────────────
 const TOKEN    = process.env.BOT_TOKEN;
 const GAME_URL = process.env.GAME_URL;
 const PORT     = process.env.PORT || 3000;
+const DB_PATH  = path.join(__dirname, 'leaderboard.json');
 
 // ── Persistence setup ──────────────────────────────────────────────────────────
-const DB_PATH = path.join(__dirname, 'leaderboard.json');
 let leaderboard = [];
 
 // Load or initialize the JSON file
@@ -45,29 +44,39 @@ loadLeaderboard();
 
 // ── Telegram Bot Setup ────────────────────────────────────────────────────────
 const bot = new TelegramBot(TOKEN, { polling: true });
+bot.on('polling_error', console.error);
 
-bot.onText(/\/start/, msg => {
-  bot.sendMessage(msg.chat.id,
+/**
+ * Send the welcome message + play button.
+ * Uses web_app in private chats, url in groups.
+ */
+function sendWelcome(msg) {
+  const chatId    = msg.chat.id;
+  const isPrivate = msg.chat.type === 'private';
+  const button    = isPrivate
+    ? { text: '▶️ Play Flappy Quakks', web_app: { url: GAME_URL } }
+    : { text: '▶️ Play Flappy Quakks', url:      GAME_URL };
+
+  bot.sendMessage(chatId,
     'Welcome to 🦆 Flappy Quakks!\nTap below to begin.',
     {
-      reply_markup: {
-        inline_keyboard: [
-          [{ text: '▶️ Play Flappy Quakks', callback_game: 'FlappyQuakks' }]
-        ]
-      }
+      reply_markup: { inline_keyboard: [[ button ]] }
     }
   );
-});
+}
 
-bot.on('callback_query', query => {
-  bot.answerCallbackQuery(query.id, { url: GAME_URL });
-});
+// Handle both /start and /flap (with or without @YourBotName)
+const cmdPattern = /^\/(start|flap)(@\w+)?$/;
+bot.onText(cmdPattern, msg => sendWelcome(msg));
 
-// ── Express Server Setup ──────────────────────────────────────────────────────
+// Acknowledge callback queries (optional)
+bot.on('callback_query', q => bot.answerCallbackQuery(q.id));
+
+// ── Express Server Setup ─────────────────────────────────────────────────────
 const app = express();
 app.use(express.json());
 
-// Serve your game's static files
+// Serve your game’s static files
 app.use(
   '/flappy_quakks',
   express.static(path.join(__dirname, 'public', 'flappy_quakks'))
@@ -116,8 +125,7 @@ app.get('/flappy_quakks/leaderboard', (req, res) => {
 
 // ── Start HTTP Server ─────────────────────────────────────────────────────────
 app.listen(PORT, () => {
-  console.log(`Running in development mode`);
-  console.log(`Game URL: ${GAME_URL}`);
-  console.log(`Persisting scores to ${DB_PATH}`);
-  console.log(`HTTP server listening on port ${PORT}`);
+  console.log(`🚀 Bot & web server listening on port ${PORT}`);
+  console.log(`   • Game URL:       ${GAME_URL}`);
+  console.log(`   • Leaderboard DB: ${DB_PATH}`);
 });

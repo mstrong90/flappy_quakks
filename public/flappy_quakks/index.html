@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <!-- full-screen under notches and status bars -->
+  <!-- allow edge-to-edge under notches/toolbars -->
   <meta name="viewport"
         content="width=device-width,
                  initial-scale=1,
@@ -13,13 +13,28 @@
   <meta name="mobile-web-app-capable" content="yes">
   <title>Flappy Quakks</title>
   <base href="/flappy_quakks/">
+
+  <!-- 1% of viewport height, updated on resize -->
+  <script>
+    function setVh() {
+      document.documentElement.style.setProperty(
+        '--vh',
+        `${window.innerHeight * 0.01}px`
+      );
+    }
+    window.addEventListener('resize', setVh);
+    setVh();
+  </script>
+
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <canvas id="gameCanvas"></canvas>
+
   <script async src="https://telegram.org/js/telegram-web-app.js"></script>
   <script src="script.js"></script>
-  
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'93630042ce0a4554',t:'MTc0NTYzODIyMS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script>
+
+  <!-- keep your Cloudflare anti-bot iframe snippet if you need it -->
+  <script>(function(){ /* …Cloudflare snippet… */ })();</script>
 </body>
 </html>
