@@ -1,22 +1,27 @@
+/* apply system insets on iOS Safari and Android WebViews */
 html, body {
   margin: 0;
-  padding: 0;
-  width: 100%;
-  height: 100%;
+  padding:
+    env(safe-area-inset-top)
+    env(safe-area-inset-right)
+    env(safe-area-inset-bottom)
+    env(safe-area-inset-left);
+  width: 100vw;
+  height: 100vh;
   overflow: hidden;
-  background: black; /* Fallback if canvas fails */
-  touch-action: none; /* Prevent pinch/zoom/scroll */
+  background: black; /* fallback */
+  touch-action: none;
   overscroll-behavior: none;
   user-select: none;
 }
 
 canvas {
-  display: block;
-  width: 100vw;
-  height: 100vh;
   position: fixed;
-  top: 0;
-  left: 0;
-  touch-action: none; /* Prevent touch scrolling */
-  image-rendering: pixelated; /* Retain pixel art style */
+  top:    env(safe-area-inset-top);
+  left:   env(safe-area-inset-left);
+  /* subtract horizontal insets from full width */
+  width:  calc(100vw - env(safe-area-inset-left) - env(safe-area-inset-right));
+  /* subtract vertical insets from full height */
+  height: calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  image-rendering: pixelated;
 }
