@@ -2,6 +2,10 @@
 
 console.log('✅ script.js loaded');
 
+// — If launched from a group “Play” button, pick up the passed username:
+const urlParams      = new URLSearchParams(window.location.search);
+const GROUP_USERNAME = urlParams.get('username');
+
 // — Canvas & context
 const canvas = document.getElementById('gameCanvas');
 const ctx    = canvas.getContext('2d');
@@ -33,7 +37,7 @@ const FPS            = 30;
 const GRAVITY        = 950;   // px/s²
 const FLAP_V         = -250;  // px/s
 let PIPE_SPEED       = 200;   // px/s
-let SPAWN_INT        = 1.5;   // sec between pipes
+let SPAWN_INT        = 1.5;   // seconds between pipes
 let PIPE_GAP         = 180;   // px
 const HITBOX_PADDING = 1;     // px inset for collision
 
@@ -67,7 +71,7 @@ let lastDifficultyScore = 0;
 let difficultyCycle     = 0;
 
 // — Duck (scaled)
-const BIRD_W     = 34, BIRD_H = 34, BIRD_SCALE = 1.80;
+const BIRD_W     = 34, BIRD_H = 24, BIRD_SCALE = 1.65;
 const bird = {
   x:      0,
   y:      0,
@@ -198,12 +202,10 @@ function drawWelcome(){
     bird.x, bird.y + 8*Math.sin(performance.now()/200),
     bird.w, bird.h
   );
-
   Btn.start.x       = WIDTH/2 - 75;
   Btn.start.y       = HEIGHT * 0.6;
   Btn.leaderboard.x = WIDTH/2 - 75;
   Btn.leaderboard.y = HEIGHT * 0.7;
-
   [Btn.start, Btn.leaderboard].forEach(b=>{
     ctx.fillStyle='#fff'; ctx.fillRect(b.x,b.y,b.w,b.h);
     ctx.fillStyle='#000'; ctx.font=`${20*(WIDTH/288)}px Arial`;
@@ -219,9 +221,9 @@ function drawWelcome(){
 function drawGameOver(){
   ctx.drawImage(IMG.bg1,0,0,WIDTH,HEIGHT);
   tileBase();
-
   ctx.drawImage(IMG.over,(WIDTH-IMG.over.width)/2,HEIGHT*0.2);
 
+  // display final score
   const scoreText = `Score: ${score}`;
   ctx.fillStyle = '#fff';
   ctx.font = `${24*(WIDTH/288)}px Arial`;
@@ -229,9 +231,10 @@ function drawGameOver(){
   ctx.fillText(scoreText,(WIDTH-textW)/2,HEIGHT*0.4);
 
   const btnY = HEIGHT*0.6;
-  Btn.start.x       = WIDTH/2 - 160; Btn.start.y       = btnY;
-  Btn.leaderboard.x = WIDTH/2 + 10;  Btn.leaderboard.y = btnY;
-
+  Btn.start.x       = WIDTH/2 - 160;
+  Btn.start.y       = btnY;
+  Btn.leaderboard.x = WIDTH/2 + 10;
+  Btn.leaderboard.y = btnY;
   [Btn.start, Btn.leaderboard].forEach(b=>{
     ctx.fillStyle='#fff'; ctx.fillRect(b.x,b.y,b.w,b.h);
     ctx.fillStyle='#000'; ctx.font=`${20*(WIDTH/288)}px Arial`;
@@ -246,10 +249,9 @@ function drawGameOver(){
 // — FETCH & DRAW LEADERBOARD
 async function fetchLeaderboard(){
   try {
-    const origin = window.location.origin;
-    const res = await fetch(`${origin}/flappy_quakks/leaderboard`);
+    const res = await fetch('leaderboard');
     topList = await res.json();
-    state = 'LEADERBOARD';
+    state   = 'LEADERBOARD';
     drawLeaderboard();
   } catch(e){
     console.error('Leaderboard load failed', e);
@@ -258,15 +260,13 @@ async function fetchLeaderboard(){
 function drawLeaderboard(){
   ctx.drawImage(IMG.bg1,0,0,WIDTH,HEIGHT);
   ctx.fillStyle='rgba(0,0,0,0.7)'; ctx.fillRect(0,0,WIDTH,HEIGHT);
-
   ctx.fillStyle='#fff'; ctx.font=`${24*(WIDTH/288)}px Arial`;
-  ctx.fillText('🏆 Top 10', WIDTH/2 - 50, 50);
-
+  ctx.fillText('🏆 Top 10', WIDTH/2-50,50);
   ctx.font=`${18*(WIDTH/288)}px Arial`;
   topList.forEach((e,i)=>{
-    ctx.fillText(`${i+1}. ${e.username}: ${e.score}`, 30, 100 + i*30);
+    ctx.fillText(`${i+1}. ${e.username}: ${e.score}`,30,100+i*30);
   });
-  ctx.fillText('Tap anywhere to restart', WIDTH/2 - 90, HEIGHT - 40);
+  ctx.fillText('Tap anywhere to restart',WIDTH/2-90,HEIGHT-40);
 }
 
 // — START PLAY
@@ -299,10 +299,8 @@ function gameLoop(){
 
 // — UPDATE PLAY
 function updatePlay(){
-  const now = performance.now(), dt = (now - lastTime)/1000;
+  const now = performance.now(), dt=(now-lastTime)/1000;
   lastTime = now;
-
-  // difficulty bumps
   if (score>=25 && score%25===0 && score>lastDifficultyScore && !pipes.some(p=>!p.scored)){
     if      (difficultyCycle%3===0) PIPE_GAP   = Math.max(100, PIPE_GAP-10);
     else if (difficultyCycle%3===1) PIPE_SPEED = Math.min(400, PIPE_SPEED+20);
@@ -310,15 +308,11 @@ function updatePlay(){
     difficultyCycle++;
     lastDifficultyScore = score;
   }
-
-  // spawn & move
   spawnTimer += dt;
-  if (spawnTimer >= SPAWN_INT){ spawnPipe(); spawnTimer -= SPAWN_INT; }
+  if (spawnTimer>=SPAWN_INT){ spawnPipe(); spawnTimer-=SPAWN_INT; }
   const pv = PIPE_SPEED * dt;
-  pipes.forEach(p=>p.x -= pv);
-  pipes = pipes.filter(p => p.x + IMG.pipe0.width > 0);
-
-  // bird physics
+  pipes.forEach(p=>p.x-=pv);
+  pipes = pipes.filter(p=>p.x + IMG.pipe0.width > 0);
   bird.vy += GRAVITY * dt;
   if (bird.flapped){
     bird.vy = FLAP_V;
@@ -326,25 +320,15 @@ function updatePlay(){
     AUD.wing.play();
   }
   bird.y += bird.vy * dt;
-
-  // collisions & scoring
-  if (bird.y < 0 || bird.y + bird.h > HEIGHT*0.79){
-    return handleGameOver();
-  }
+  if (bird.y<0||bird.y+bird.h>HEIGHT*0.79) return handleGameOver();
   pipes.forEach(p=>{
-    const pw = IMG.pipe0.width, ph = IMG.pipe0.height;
-    const topR = { x:p.x, y:p.y-ph+HITBOX_PADDING, w:pw, h:ph-HITBOX_PADDING };
-    const botR = { x:p.x, y:p.y+PIPE_GAP, w:pw, h:ph-HITBOX_PADDING };
-    const birdR= {
-      x: bird.x + HITBOX_PADDING,
-      y: bird.y + HITBOX_PADDING,
-      w: bird.w - 2*HITBOX_PADDING,
-      h: bird.h - 2*HITBOX_PADDING
-    };
-    if (intersect(birdR, topR) || intersect(birdR, botR)){
-      return handleGameOver();
-    }
-    if (!p.scored && p.x + pw < bird.x){
+    const pw=IMG.pipe0.width, ph=IMG.pipe0.height;
+    const topR={x:p.x,y:p.y-ph+HITBOX_PADDING,w:pw,h:ph-HITBOX_PADDING};
+    const botR={x:p.x,y:p.y+PIPE_GAP,w:pw,h:ph-HITBOX_PADDING};
+    const birdR={x:bird.x+HITBOX_PADDING,y:bird.y+HITBOX_PADDING,
+                 w:bird.w-2*HITBOX_PADDING,h:bird.h-2*HITBOX_PADDING};
+    if (intersect(birdR, topR)||intersect(birdR, botR)) return handleGameOver();
+    if (!p.scored&&p.x+pw<bird.x){
       p.scored = true;
       score++;
       AUD.point.play();
@@ -357,57 +341,45 @@ function drawPlay(){
   ctx.drawImage(IMG.bg1,0,0,WIDTH,HEIGHT);
   pipes.forEach(p=>{
     const pw=IMG.pipe0.width, ph=IMG.pipe0.height;
-    ctx.save();
-    ctx.translate(p.x+pw/2, p.y);
-    ctx.scale(1, -1);
-    ctx.drawImage(IMG.pipe0, -pw/2, 0);
-    ctx.restore();
-    ctx.drawImage(IMG.pipe0, p.x, p.y+PIPE_GAP);
+    ctx.save(); ctx.translate(p.x+pw/2,p.y); ctx.scale(1,-1);
+    ctx.drawImage(IMG.pipe0,-pw/2,0); ctx.restore();
+    ctx.drawImage(IMG.pipe0,p.x,p.y+PIPE_GAP);
   });
-  ctx.drawImage(IMG[`bird${bird.frame}`], bird.x, bird.y, bird.w, bird.h);
-
-  // draw score
-  let totalW = 0, digits = Array.from(String(score), Number);
-  digits.forEach(d => totalW += IMG[`num${d}`].width);
-  let x0 = (WIDTH - totalW)/2;
-  digits.forEach(d=>{
-    ctx.drawImage(IMG[`num${d}`], x0, 20*(WIDTH/288));
-    x0 += IMG[`num${d}`].width;
-  });
+  ctx.drawImage(IMG[`bird${bird.frame}`],bird.x,bird.y,bird.w,bird.h);
+  let totalW=0,digits=Array.from(String(score),Number);
+  digits.forEach(d=>totalW+=IMG[`num${d}`].width);
+  let x0=(WIDTH-totalW)/2;
+  digits.forEach(d=>{ ctx.drawImage(IMG[`num${d}`],x0,20*(WIDTH/288)); x0+=IMG[`num${d}`].width; });
   tileBase();
 }
 
 // — TILE BASE
 function tileBase(){
-  const b = IMG.base, by = HEIGHT - b.height;
-  baseX = (baseX - 2) % b.width;
-  for(let x = baseX - b.width; x < WIDTH; x += b.width){
-    ctx.drawImage(b, x, by);
-  }
+  const b=IMG.base, by=HEIGHT-b.height;
+  baseX=(baseX-2)%b.width;
+  for(let x=baseX-b.width;x<WIDTH;x+=b.width) ctx.drawImage(b,x,by);
 }
 
 // — GAME OVER handler
 async function handleGameOver(){
-  if (state !== 'PLAY') return;
-  state = 'GAMEOVER';
-  AUD.hit.play();
-  AUD.die.play();
+  if (state!=='PLAY') return;
+  state='GAMEOVER';
+  AUD.hit.play(); AUD.die.play();
 
-  // submit score, but do not auto-load leaderboard
-  const origin = window.location.origin;
-  const submitUrl = `${origin}/flappy_quakks/submit`;
-  const user = window.Telegram?.WebApp?.initDataUnsafe?.user;
-  const username = user?.username
+  // choose group-passed username first
+  const user = window.Telegram?.WebApp?.initDataUnsafe?.user || {};
+  const username = user.username
     ? '@'+user.username
-    : `${user?.first_name||'user'}_${user?.id||0}`;
+    : (GROUP_USERNAME || `${user.first_name||'user'}_${user.id||0}`);
 
+  const submitUrl = `${location.origin}/flappy_quakks/submit`;
   try {
     await fetch(submitUrl, {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ username, score })
     });
-  } catch (e) {
+  } catch(e){
     console.error('Submit error:', e);
   }
 }
