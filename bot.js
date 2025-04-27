@@ -12,44 +12,27 @@ const GAME_URL = process.env.GAME_URL;
 const PORT     = process.env.PORT || 3000;
 const DB_PATH  = path.join(__dirname, 'leaderboard.json');
 
-// ── Persistence setup ──────────────────────────────────────────────────────────
+// ── Load or initialize leaderboard ────────────────────────────────────────────
 let leaderboard = [];
-
-// Load or initialize the JSON file
-function loadLeaderboard() {
-  try {
-    const raw = fs.readFileSync(DB_PATH, 'utf-8');
-    const data = JSON.parse(raw);
-    if (Array.isArray(data)) {
-      leaderboard = data;
-    } else {
-      leaderboard = [];
-    }
-  } catch (e) {
-    // Missing or invalid → start fresh
-    leaderboard = [];
-    saveLeaderboard();
-  }
+try {
+  const raw = fs.readFileSync(DB_PATH, 'utf-8');
+  leaderboard = JSON.parse(raw);
+  if (!Array.isArray(leaderboard)) throw new Error('Not an array');
+} catch {
+  console.log('Initializing leaderboard.json');
+  leaderboard = [];
+  fs.writeFileSync(DB_PATH, JSON.stringify(leaderboard, null, 2), 'utf-8');
 }
 
-// Write out the full array (everyone’s best) to disk
+// ── Helper to save ────────────────────────────────────────────────────────────
 function saveLeaderboard() {
-  fs.writeFileSync(DB_PATH,
-                   JSON.stringify(leaderboard, null, 2),
-                   'utf-8');
+  fs.writeFileSync(DB_PATH, JSON.stringify(leaderboard, null, 2), 'utf-8');
 }
 
-// Do it on startup
-loadLeaderboard();
-
-// ── Telegram Bot Setup ────────────────────────────────────────────────────────
+// ── Telegram Bot Setup ─────────────────────────────────────────────────────────
 const bot = new TelegramBot(TOKEN, { polling: true });
 bot.on('polling_error', console.error);
 
-/**
- * Send the welcome message + play button.
- * Uses web_app in private chats, url in groups.
- */
 function sendWelcome(msg) {
   const chatId    = msg.chat.id;
   const isPrivate = msg.chat.type === 'private';
@@ -59,73 +42,60 @@ function sendWelcome(msg) {
 
   bot.sendMessage(chatId,
     'Welcome to 🦆 Flappy Quakks!\nTap below to begin.',
-    {
-      reply_markup: { inline_keyboard: [[ button ]] }
-    }
+    { reply_markup: { inline_keyboard: [[ button ]] } }
   );
 }
-
-// Handle both /start and /flap (with or without @YourBotName)
 const cmdPattern = /^\/(start|flap)(@\w+)?$/;
 bot.onText(cmdPattern, msg => sendWelcome(msg));
-
-// Acknowledge callback queries (optional)
 bot.on('callback_query', q => bot.answerCallbackQuery(q.id));
 
-// ── Express Server Setup ─────────────────────────────────────────────────────
+// ── Express Server Setup ──────────────────────────────────────────────────────
 const app = express();
 app.use(express.json());
 
-// Serve your game’s static files
 app.use(
   '/flappy_quakks',
   express.static(path.join(__dirname, 'public', 'flappy_quakks'))
 );
 
-// ── Leaderboard Endpoints ─────────────────────────────────────────────────────
-
-// 1) Submit a new score:
-//    { username: '@foo', score: 42 }
+// POST new score
 app.post('/flappy_quakks/submit', (req, res) => {
+  console.log('📝 Received SCORE SUBMIT:', req.body);
   const { username, score } = req.body;
   if (typeof username !== 'string' || typeof score !== 'number') {
     return res.status(400).json({ error: 'Invalid payload' });
   }
 
-  // Find existing entry
   const existing = leaderboard.find(e => e.username === username);
   if (existing) {
-    // Only update if this is a new personal best
     if (score > existing.score) {
+      console.log(`Updating ${username}: ${existing.score} → ${score}`);
       existing.score = score;
     }
   } else {
-    // First time for this user
+    console.log(`Adding ${username}: ${score}`);
     leaderboard.push({ username, score });
   }
 
-  // Sort descending so highest scores first
   leaderboard.sort((a, b) => b.score - a.score);
-
-  // Persist **everyone**’s best
   try {
     saveLeaderboard();
+    console.log('Leaderboard saved:', leaderboard);
     res.json({ status: 'ok' });
   } catch (err) {
-    console.error('Failed to save leaderboard:', err);
+    console.error('❌ Failed to save leaderboard:', err);
     res.status(500).json({ error: 'Could not save leaderboard' });
   }
 });
 
-// 2) Fetch the top-10 only
+// GET top-10
 app.get('/flappy_quakks/leaderboard', (req, res) => {
-  // Send back the first 10 entries
+  console.log('GET LEADERBOARD →', leaderboard.slice(0, 10));
   res.json(leaderboard.slice(0, 10));
 });
 
-// ── Start HTTP Server ─────────────────────────────────────────────────────────
 app.listen(PORT, () => {
-  console.log(`🚀 Bot & web server listening on port ${PORT}`);
+  console.log(`🚀 Server listening on port ${PORT}`);
   console.log(`   • Game URL:       ${GAME_URL}`);
   console.log(`   • Leaderboard DB: ${DB_PATH}`);
 });
