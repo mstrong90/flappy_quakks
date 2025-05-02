@@ -305,8 +305,12 @@ function drawGameOver(){
 // — FETCH & DRAW LEADERBOARD
 async function fetchLeaderboard(){
   try {
-    const endpoint = gameMode === 'CLASSIC' ? 'leaderboard' : 'SR-leaderboard';
+    const endpoint =
+         gameMode === 'CLASSIC'
+         ? 'leaderboard.json'
+         : 'sr-leaderboard.json';
     const url = `${location.origin}/flappy_quakks/${endpoint}`;
+
     const res = await fetch(url);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     topList = await res.json();
