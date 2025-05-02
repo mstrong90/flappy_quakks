@@ -274,7 +274,7 @@ function drawWelcome(){
 
 // — DRAW GAME OVER
 function drawGameOver(){
-  ctx.drawImage(IMG.bg1,0,0,WIDTH,HEIGHT);
+  ctx.drawImage(IMG.bg0,0,0,WIDTH,HEIGHT);
   tileBase();
   ctx.drawImage(IMG.over,(WIDTH-IMG.over.width)/2,HEIGHT*0.2);
 
@@ -306,7 +306,9 @@ function drawGameOver(){
 async function fetchLeaderboard(){
   try {
     const endpoint = gameMode === 'CLASSIC' ? 'leaderboard' : 'SR-leaderboard';
-    const res = await fetch(endpoint);
+    const url = `${location.origin}/flappy_quakks/${endpoint}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     topList = await res.json();
     state   = 'LEADERBOARD';
     drawLeaderboard();
@@ -375,7 +377,7 @@ function updatePlay(){
     AUD.wing.play();
   }
   bird.y += bird.vy * dt;
-  if (bird.y<0||bird.y+bird.h>HEIGHT*0.79) return handleGameOver();
+  if (bird.y<0||bird.y+bird.h>HEIGHT*0.85) return handleGameOver();
   pipes.forEach(p=>{
     const pw=IMG.pipe0.width, ph=IMG.pipe0.height;
     const topR={x:p.x,y:p.y-ph+settings.HITBOX_PADDING,w:pw,h:ph-settings.HITBOX_PADDING};
@@ -411,7 +413,7 @@ function drawPlay(){
 
 // — TILE BASE
 function tileBase(){
-  const b=IMG.base, by=HEIGHT-b.height;
+  const b=IMG.base, by=HEIGHT-b.height + 20;
   baseX=(baseX-2)%b.width;
   for(let x=baseX-b.width;x<WIDTH;x+=b.width) ctx.drawImage(b,x,by);
 }
