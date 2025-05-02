@@ -305,10 +305,11 @@ function drawGameOver(){
 // — FETCH & DRAW LEADERBOARD
 async function fetchLeaderboard(){
   try {
+    // match your new dynamic routes
     const endpoint =
          gameMode === 'CLASSIC'
-         ? 'leaderboard.json'
-         : 'sr-leaderboard.json';
+         ? 'leaderboard'
+         : 'SR-leaderboard';
     const url = `${location.origin}/flappy_quakks/${endpoint}`;
 
     const res = await fetch(url);
@@ -324,10 +325,16 @@ function drawLeaderboard(){
   ctx.drawImage(IMG.bg0,0,0,WIDTH,HEIGHT);
   ctx.fillStyle='rgba(0,0,0,0.7)'; ctx.fillRect(0,0,WIDTH,HEIGHT);
   ctx.fillStyle='#fff'; ctx.font=`${24*(WIDTH/288)}px Arial`;
-  ctx.fillText(`🏆 Top 10 ${gameMode === 'CLASSIC' ? 'Classic' : 'Speed Run'}`, WIDTH/2-80,50);
+  ctx.fillText(`🏆 Top 10 ${gameMode === 'CLASSIC' ? 'Classic' : 'Speed Run'}`, WIDTH/2,60);
   ctx.font=`${18*(WIDTH/288)}px Arial`;
-  topList.forEach((e,i)=>{
-    ctx.fillText(`${i+1}. ${e.username}: ${e.score}`,30,100+i*30);
+  topList
+  .slice(0, 10)           // only take up to 10 items
+  .forEach((e, i) => {
+    ctx.fillText(
+      `${i+1}. ${e.username}: ${e.score}`,
+      30,
+      100 + i * 30
+    );
   });
   ctx.fillText('Tap anywhere to restart',WIDTH/2-90,HEIGHT-40);
 }

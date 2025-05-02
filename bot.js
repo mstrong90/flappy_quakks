@@ -1,5 +1,3 @@
-// bot.js
-
 require('dotenv').config();
 const express     = require('express');
 const path        = require('path');
@@ -7,16 +5,21 @@ const fs          = require('fs');
 const TelegramBot = require('node-telegram-bot-api');
 
 // ── Config ───────────────────────────────────────────────────────────────────
-const TOKEN    = process.env.BOT_TOKEN;
-const GAME_URL = process.env.GAME_URL;
-const PORT     = process.env.PORT || 3000;
-const DB_PATH  = path.join(__dirname, 'leaderboard.json');
+const TOKEN      = process.env.BOT_TOKEN;
+const GAME_URL   = process.env.GAME_URL;
+const PORT       = process.env.PORT || 3000;
+// file paths for classic and speed-run leaderboards
+targetDir = path.join(__dirname);
+const LB_PATH    = path.join(targetDir, 'leaderboard.json');
+const SR_PATH    = path.join(targetDir, 'sr-leaderboard.json');
 
 // ── Persistence setup ─────────────────────────────────────────────────────────
-let leaderboard = [];
+let leaderboard   = [];
+let srLeaderboard = [];
+
 function loadLeaderboard() {
   try {
-    const raw = fs.readFileSync(DB_PATH, 'utf-8');
+    const raw = fs.readFileSync(LB_PATH, 'utf-8');
     const data = JSON.parse(raw);
     leaderboard = Array.isArray(data) ? data : [];
   } catch {
@@ -24,10 +27,29 @@ function loadLeaderboard() {
     saveLeaderboard();
   }
 }
+
 function saveLeaderboard() {
-  fs.writeFileSync(DB_PATH, JSON.stringify(leaderboard, null, 2), 'utf-8');
+  fs.writeFileSync(LB_PATH, JSON.stringify(leaderboard, null, 2), 'utf-8');
 }
+
+function loadSRLeaderboard() {
+  try {
+    const raw = fs.readFileSync(SR_PATH, 'utf-8');
+    const data = JSON.parse(raw);
+    srLeaderboard = Array.isArray(data) ? data : [];
+  } catch {
+    srLeaderboard = [];
+    saveSRLeaderboard();
+  }
+}
+
+function saveSRLeaderboard() {
+  fs.writeFileSync(SR_PATH, JSON.stringify(srLeaderboard, null, 2), 'utf-8');
+}
+
+// initialize data stores
 loadLeaderboard();
+loadSRLeaderboard();
 
 // ── Telegram Bot Setup ────────────────────────────────────────────────────────
 const bot = new TelegramBot(TOKEN, { polling: true });
@@ -42,10 +64,10 @@ function sendWelcome(msg) {
   let button;
 
   if (isPrivate) {
-    // in DM, use callback_game → opens as Web App
+    // in DM, opens as Web App
     button = { text: '▶️ Play Flappy Quakks', web_app: { url: GAME_URL } };
   } else {
-    // in groups, append the caller’s username into the URL
+    // in groups, include username in URL param
     const from = msg.from;
     const uname = from.username
       ? '@' + from.username
@@ -56,21 +78,21 @@ function sendWelcome(msg) {
 
   bot.sendMessage(chatId,
     'Welcome to 🦆 Flappy Quakks!\nTap below to begin.',
-    {
-      reply_markup: { inline_keyboard: [ [ button ] ] }
-    }
+    { reply_markup: { inline_keyboard: [[ button ]] } }
   );
 }
 
-// no callback_game callback needed for group
 bot.on('callback_query', q => bot.answerCallbackQuery(q.id));
 
 // ── Express Server Setup ─────────────────────────────────────────────────────
 const app = express();
 app.use(express.json());
-app.use('/flappy_quakks', express.static(path.join(__dirname, 'public', 'flappy_quakks')));
+app.use(
+  '/flappy_quakks',
+  express.static(path.join(__dirname, 'public', 'flappy_quakks'))
+);
 
-// ── Leaderboard Endpoints ─────────────────────────────────────────────────────
+// ── Classic Leaderboard Endpoints ─────────────────────────────────────────────
 app.post('/flappy_quakks/submit', (req, res) => {
   const { username, score } = req.body;
   if (typeof username !== 'string' || typeof score !== 'number') {
@@ -82,17 +104,48 @@ app.post('/flappy_quakks/submit', (req, res) => {
   } else {
     leaderboard.push({ username, score });
   }
-  leaderboard.sort((a,b) => b.score - a.score);
-  try { saveLeaderboard(); res.json({ status: 'ok' }); }
-  catch { res.status(500).json({ error: 'Could not save leaderboard' }); }
+  leaderboard.sort((a, b) => b.score - a.score);
+  try {
+    saveLeaderboard();
+    res.json({ status: 'ok' });
+  } catch {
+    res.status(500).json({ error: 'Could not save leaderboard' });
+  }
 });
 
 app.get('/flappy_quakks/leaderboard', (req, res) => {
   res.json(leaderboard.slice(0, 10));
 });
 
+// ── Speed-Run Leaderboard Endpoints ───────────────────────────────────────────
+app.post('/flappy_quakks/SR-submit', (req, res) => {
+  const { username, score } = req.body;
+  if (typeof username !== 'string' || typeof score !== 'number') {
+    return res.status(400).json({ error: 'Invalid payload' });
+  }
+  const existing = srLeaderboard.find(e => e.username === username);
+  if (existing) {
+    if (score > existing.score) existing.score = score;
+  } else {
+    srLeaderboard.push({ username, score });
+  }
+  srLeaderboard.sort((a, b) => b.score - a.score);
+  try {
+    saveSRLeaderboard();
+    res.json({ status: 'ok' });
+  } catch {
+    res.status(500).json({ error: 'Could not save SR leaderboard' });
+  }
+});
+
+app.get('/flappy_quakks/SR-leaderboard', (req, res) => {
+  res.json(srLeaderboard.slice(0, 10));
+});
+
+// ── Start Server ──────────────────────────────────────────────────────────────
 app.listen(PORT, () => {
-  console.log(`🚀 Bot & web server listening on port ${PORT}`);
+  console.log(`🚀 Server listening on port ${PORT}`);
   console.log(`   • Game URL:       ${GAME_URL}`);
-  console.log(`   • Leaderboard DB: ${DB_PATH}`);
+  console.log(`   • LB file:        ${LB_PATH}`);
+  console.log(`   • SR-LB file:     ${SR_PATH}`);
 });
