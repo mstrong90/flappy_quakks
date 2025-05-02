@@ -47,8 +47,8 @@ const CLASSIC_SETTINGS = {
 // — Asset paths
 const PATH = 'assets/';
 const SPRITES = {
-  bg:    [PATH+'sprites/background-day.png', PATH+'sprites/background-night.png'],
-  pipe:  [PATH+'sprites/pipe-green.png',     PATH+'sprites/pipe-red.png'],
+  bg:    [PATH+'sprites/bg.png'],
+  pipe:  [PATH+'sprites/pipe-green.png', PATH+'sprites/pipe-red.png'],
   base:  PATH+'sprites/base.png',
   bird:  [PATH+'sprites/duck.png', PATH+'sprites/duck.png', PATH+'sprites/duck.png'],
   nums:  Array.from({length:10},(_,i)=> PATH+`sprites/${i}.png`),
@@ -315,7 +315,7 @@ async function fetchLeaderboard(){
   }
 }
 function drawLeaderboard(){
-  ctx.drawImage(IMG.bg1,0,0,WIDTH,HEIGHT);
+  ctx.drawImage(IMG.bg0,0,0,WIDTH,HEIGHT);
   ctx.fillStyle='rgba(0,0,0,0.7)'; ctx.fillRect(0,0,WIDTH,HEIGHT);
   ctx.fillStyle='#fff'; ctx.font=`${24*(WIDTH/288)}px Arial`;
   ctx.fillText(`🏆 Top 10 ${gameMode === 'CLASSIC' ? 'Classic' : 'Speed Run'}`, WIDTH/2-80,50);
@@ -393,7 +393,7 @@ function updatePlay(){
 
 // — DRAW PLAY
 function drawPlay(){
-  ctx.drawImage(IMG.bg1,0,0,WIDTH,HEIGHT);
+  ctx.drawImage(IMG.bg0,0,0,WIDTH,HEIGHT);
   pipes.forEach(p=>{
     const pw=IMG.pipe0.width, ph=IMG.pipe0.height;
     ctx.save(); ctx.translate(p.x+pw/2,p.y); ctx.scale(1,-1);
