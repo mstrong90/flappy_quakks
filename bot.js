@@ -8,15 +8,16 @@ const TelegramBot = require('node-telegram-bot-api');
 const TOKEN      = process.env.BOT_TOKEN;
 const GAME_URL   = process.env.GAME_URL;
 const PORT       = process.env.PORT || 3000;
-// file paths for classic and speed-run leaderboards
-targetDir = path.join(__dirname);
-const LB_PATH    = path.join(targetDir, 'leaderboard.json');
-const SR_PATH    = path.join(targetDir, 'sr-leaderboard.json');
 
-// ── Persistence setup ─────────────────────────────────────────────────────────
+// ── File paths for leaderboards ──────────────────────────────────────────────
+const LB_PATH = path.join(__dirname, 'leaderboard.json');
+const SR_PATH = path.join(__dirname, 'sr-leaderboard.json');
+
+// ── In-memory stores ─────────────────────────────────────────────────────────
 let leaderboard   = [];
 let srLeaderboard = [];
 
+// ── Load/Save helpers ─────────────────────────────────────────────────────────
 function loadLeaderboard() {
   try {
     const raw = fs.readFileSync(LB_PATH, 'utf-8');
@@ -27,11 +28,9 @@ function loadLeaderboard() {
     saveLeaderboard();
   }
 }
-
 function saveLeaderboard() {
   fs.writeFileSync(LB_PATH, JSON.stringify(leaderboard, null, 2), 'utf-8');
 }
-
 function loadSRLeaderboard() {
   try {
     const raw = fs.readFileSync(SR_PATH, 'utf-8');
@@ -42,12 +41,11 @@ function loadSRLeaderboard() {
     saveSRLeaderboard();
   }
 }
-
 function saveSRLeaderboard() {
   fs.writeFileSync(SR_PATH, JSON.stringify(srLeaderboard, null, 2), 'utf-8');
 }
 
-// initialize data stores
+// ── Initialize data stores ───────────────────────────────────────────────────
 loadLeaderboard();
 loadSRLeaderboard();
 
@@ -55,20 +53,40 @@ loadSRLeaderboard();
 const bot = new TelegramBot(TOKEN, { polling: true });
 bot.on('polling_error', console.error);
 
+// Handle /start and /flap commands
+git
 const cmdPattern = /^\/(start|flap)(@\w+)?$/;
 bot.onText(cmdPattern, msg => sendWelcome(msg));
 
+// Acknowledge callback queries
+bot.on('callback_query', q => bot.answerCallbackQuery(q.id));
+
+// ── Reset Commands ─────────────────────────────────────────────────────────────
+bot.onText(/^\/resetclassic$/, (msg) => {
+  const chatId = msg.chat.id;
+  leaderboard = [];
+  saveLeaderboard();
+  bot.sendMessage(chatId, '🦆 Classic leaderboard has been reset.');
+});
+bot.onText(/^\/resetspeed$/, (msg) => {
+  const chatId = msg.chat.id;
+  srLeaderboard = [];
+  saveSRLeaderboard();
+  bot.sendMessage(chatId, '🦆 Speed-Run leaderboard has been reset.');
+});
+
+// ── sendWelcome function ──────────────────────────────────────────────────────
 function sendWelcome(msg) {
   const chatId    = msg.chat.id;
   const isPrivate = msg.chat.type === 'private';
   let button;
 
   if (isPrivate) {
-    // in DM, opens as Web App
+    // DM: open Web App
     button = { text: '▶️ Play Flappy Quakks', web_app: { url: GAME_URL } };
   } else {
-    // in groups, include username in URL param
-    const from = msg.from;
+    // Group: include username param
+    const from  = msg.from;
     const uname = from.username
       ? '@' + from.username
       : `${from.first_name||'user'}_${from.id}`;
@@ -81,8 +99,6 @@ function sendWelcome(msg) {
     { reply_markup: { inline_keyboard: [[ button ]] } }
   );
 }
-
-bot.on('callback_query', q => bot.answerCallbackQuery(q.id));
 
 // ── Express Server Setup ─────────────────────────────────────────────────────
 const app = express();
@@ -104,13 +120,9 @@ app.post('/flappy_quakks/submit', (req, res) => {
   } else {
     leaderboard.push({ username, score });
   }
-  leaderboard.sort((a, b) => b.score - a.score);
-  try {
-    saveLeaderboard();
-    res.json({ status: 'ok' });
-  } catch {
-    res.status(500).json({ error: 'Could not save leaderboard' });
-  }
+  leaderboard.sort((a,b) => b.score - a.score);
+  try { saveLeaderboard(); res.json({ status: 'ok' }); }
+  catch { res.status(500).json({ error: 'Could not save leaderboard' }); }
 });
 
 app.get('/flappy_quakks/leaderboard', (req, res) => {
@@ -129,13 +141,9 @@ app.post('/flappy_quakks/SR-submit', (req, res) => {
   } else {
     srLeaderboard.push({ username, score });
   }
-  srLeaderboard.sort((a, b) => b.score - a.score);
-  try {
-    saveSRLeaderboard();
-    res.json({ status: 'ok' });
-  } catch {
-    res.status(500).json({ error: 'Could not save SR leaderboard' });
-  }
+  srLeaderboard.sort((a,b) => b.score - a.score);
+  try { saveSRLeaderboard(); res.json({ status: 'ok' }); }
+  catch { res.status(500).json({ error: 'Could not save SR leaderboard' }); }
 });
 
 app.get('/flappy_quakks/SR-leaderboard', (req, res) => {
@@ -145,7 +153,4 @@ app.get('/flappy_quakks/SR-leaderboard', (req, res) => {
 // ── Start Server ──────────────────────────────────────────────────────────────
 app.listen(PORT, () => {
   console.log(`🚀 Server listening on port ${PORT}`);
-  console.log(`   • Game URL:       ${GAME_URL}`);
-  console.log(`   • LB file:        ${LB_PATH}`);
-  console.log(`   • SR-LB file:     ${SR_PATH}`);
 });
