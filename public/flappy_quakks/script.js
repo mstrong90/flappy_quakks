@@ -158,7 +158,7 @@ function createPipe(x){
 function spawnInitial(){
   pipes = [];
   const pw = IMG.pipe0.width;
-  pipes.push(createPipe(WIDTH + pw*3), createPipe(WIDTH + pw*6));
+  pipes.push(createPipe(WIDTH + pw*5));
 }
 function spawnPipe(){
   pipes.push(createPipe(WIDTH + 10));
@@ -325,7 +325,7 @@ function drawLeaderboard(){
   ctx.drawImage(IMG.bg0,0,0,WIDTH,HEIGHT);
   ctx.fillStyle='rgba(0,0,0,0.7)'; ctx.fillRect(0,0,WIDTH,HEIGHT);
   ctx.fillStyle='#fff'; ctx.font=`${24*(WIDTH/288)}px Arial`;
-  ctx.fillText(`🏆 Top 10 ${gameMode === 'CLASSIC' ? 'Classic' : 'Speed Run'}`, WIDTH/2,60);
+  ctx.fillText(`🏆 Top 10 ${gameMode === 'CLASSIC' ? 'Classic' : 'Speed Run'}`, WIDTH/2-120, 50);
   ctx.font=`${18*(WIDTH/288)}px Arial`;
   topList
   .slice(0, 10)           // only take up to 10 items
