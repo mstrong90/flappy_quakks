@@ -54,7 +54,6 @@ const bot = new TelegramBot(TOKEN, { polling: true });
 bot.on('polling_error', console.error);
 
 // Handle /start and /flap commands
-git
 const cmdPattern = /^\/(start|flap)(@\w+)?$/;
 bot.onText(cmdPattern, msg => sendWelcome(msg));
 

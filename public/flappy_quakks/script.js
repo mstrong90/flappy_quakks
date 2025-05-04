@@ -50,7 +50,15 @@ const SPRITES = {
   bg:    [PATH+'sprites/bg.png'],
   pipe:  [PATH+'sprites/pipe-green.png', PATH+'sprites/pipe-red.png'],
   base:  PATH+'sprites/base.png',
-  bird:  [PATH+'sprites/duck.png', PATH+'sprites/duck.png', PATH+'sprites/duck.png'],
+  bird: [
+    PATH + 'sprites/duck.png',
+    PATH + 'sprites/duck1.png',
+    PATH + 'sprites/duck2.png',
+    PATH + 'sprites/duck3.png',
+    PATH + 'sprites/duck4.png',
+    PATH + 'sprites/duck5.png',
+    PATH + 'sprites/duck6.png'
+  ],
   nums:  Array.from({length:10},(_,i)=> PATH+`sprites/${i}.png`),
   msg:   PATH+'sprites/message.png',
   over:  PATH+'sprites/gameover.png'
@@ -75,7 +83,7 @@ let lastDifficultyScore = 0;
 let difficultyCycle     = 0;
 
 // — Duck (scaled)
-const BIRD_W     = 34, BIRD_H = 34, BIRD_SCALE = 1.8;
+const BIRD_W     = 34, BIRD_H = 34, BIRD_SCALE = 1.9;
 const bird = {
   x:      0,
   y:      0,
@@ -83,7 +91,8 @@ const bird = {
   w:      BIRD_W * BIRD_SCALE,
   h:      BIRD_H * BIRD_SCALE,
   frame:  0,
-  flapped:false
+  flapped:false,
+  variant: 0
 };
 
 // — Buttons
@@ -147,6 +156,20 @@ function intersect(a,b){
          a.y < b.y + b.h &&
          a.y + a.h > b.y;
 }
+
+// ─ Variant bag to avoid repeats ──────────────────────────────────────────────
+let variantBag = [];
+function refillVariantBag(){
+  // create [0,1,2,3,4,5,6]
+  variantBag = SPRITES.bird.map((_,i) => i);
+  // Fisher–Yates shuffle
+  for(let i = variantBag.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    [variantBag[i], variantBag[j]] = [variantBag[j], variantBag[i]];
+  }
+}
+// fill it once at load
+refillVariantBag();
 
 // — Pipe creation
 function createPipe(x){
@@ -226,7 +249,7 @@ function drawModeSelect(){
   ctx.drawImage(IMG.msg,(WIDTH-IMG.msg.width)/2,HEIGHT*0.12);
   bird.frame = ++bird.frame % SPRITES.bird.length;
   ctx.drawImage(
-    IMG[`bird${bird.frame}`],
+    IMG[`bird${bird.variant}`],
     bird.x, bird.y + 8*Math.sin(performance.now()/200),
     bird.w, bird.h
   );
@@ -350,6 +373,8 @@ function startPlay(){
   lastTime   = performance.now();
   lastDifficultyScore = 0;
   difficultyCycle     = 0;
+  if (variantBag.length === 0) refillVariantBag();
+  bird.variant = variantBag.pop();
   spawnInitial();
   AUD.wing.play();
 }
