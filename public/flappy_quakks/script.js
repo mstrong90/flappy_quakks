@@ -1,5 +1,6 @@
 console.log('✅ script.js loaded');
 
+
 // — Import Speed Run settings
 import * as SpeedRunSettings from './speedRunSettings.js';
 
@@ -35,13 +36,13 @@ if (window.Telegram?.WebApp) {
 
 // — Game constants (Classic mode)
 const CLASSIC_SETTINGS = {
-  FPS:            30,
-  GRAVITY:        950,   // px/s²
+  FPS:            60,
+  GRAVITY:        975,   // px/s²
   FLAP_V:         -250,  // px/s
   PIPE_SPEED:     200,   // px/s
   SPAWN_INT:      1.5,   // seconds between pipes
   PIPE_GAP:       180,   // px
-  HITBOX_PADDING: 4      // px inset for collision
+  HITBOX_PADDING: 6      // px inset for collision
 };
 
 // — Asset paths
@@ -57,7 +58,9 @@ const SPRITES = {
     PATH + 'sprites/duck3.png',
     PATH + 'sprites/duck4.png',
     PATH + 'sprites/duck5.png',
-    PATH + 'sprites/duck6.png'
+    PATH + 'sprites/duck6.png',
+    PATH + 'sprites/duck7.png',
+    PATH + 'sprites/duck8.png'
   ],
   nums:  Array.from({length:10},(_,i)=> PATH+`sprites/${i}.png`),
   msg:   PATH+'sprites/message.png',
@@ -160,7 +163,7 @@ function intersect(a,b){
 // ─ Variant bag to avoid repeats ──────────────────────────────────────────────
 let variantBag = [];
 function refillVariantBag(){
-  // create [0,1,2,3,4,5,6]
+  // create [0,1,2,3,4,5,6,7,8]
   variantBag = SPRITES.bird.map((_,i) => i);
   // Fisher–Yates shuffle
   for(let i = variantBag.length - 1; i > 0; i--){
@@ -181,7 +184,7 @@ function createPipe(x){
 function spawnInitial(){
   pipes = [];
   const pw = IMG.pipe0.width;
-  pipes.push(createPipe(WIDTH + pw*5));
+  pipes.push(createPipe(WIDTH + pw*6));
 }
 function spawnPipe(){
   pipes.push(createPipe(WIDTH + 10));
@@ -439,7 +442,7 @@ function drawPlay(){
     const settings = gameMode === 'SPEED_RUN' ? SpeedRunSettings : CLASSIC_SETTINGS;
     ctx.drawImage(IMG.pipe0,p.x,p.y+settings.PIPE_GAP);
   });
-  ctx.drawImage(IMG[`bird${bird.frame}`],bird.x,bird.y,bird.w,bird.h);
+  ctx.drawImage(IMG[`bird${bird.variant}`],bird.x,bird.y,bird.w,bird.h);
   let totalW=0,digits=Array.from(String(score),Number);
   digits.forEach(d=>totalW+=IMG[`num${d}`].width);
   let x0=(WIDTH-totalW)/2;
