@@ -1,7 +1,5 @@
 console.log('✅ script.js loaded');
 
-const startTime = performance.now();
-
 // — Import Speed Run settings
 import * as SpeedRunSettings from './speedRunSettings.js';
 
@@ -81,6 +79,7 @@ let score = 0;
 let pipes = [];
 let baseX = 0;
 let topList = [];
+let playStartTime = 0; // Tracks start of PLAY state
 
 // — Duck (scaled)
 const BIRD_W = 34, BIRD_H = 34, BIRD_SCALE = 1.9;
@@ -382,6 +381,7 @@ function startPlay(){
   // reset difficulty
   lastDifficultyScore = 0;
   difficultyCycle     = 0;
+  playStartTime = performance.now(); // Set play start time
   // ensure variantbag has current pick at top
   if (variantBag.length === 0) refillVariantBag();
   // do not pop a new variant: keep current bird.variant
@@ -459,13 +459,13 @@ async function handleGameOver() {
   state = 'GAMEOVER';
   AUD.hit.play(); AUD.die.play();
 
- // build username
+  // build username
   const tg   = window.Telegram?.WebApp;
   const user = tg?.initDataUnsafe?.user || {};
   const username = user.username
     ? '@' + user.username
     : `${user.first_name}_${user.id}`;
-  const durationMs = performance.now() - startTime;
+  const durationMs = performance.now() - playStartTime; // Calculate play time
   const mode       = gameMode === 'CLASSIC' ? 'classic' : 'speed';
 
   try {
