@@ -1,7 +1,27 @@
 [
   {
     "username": "@TheCryptoGuyOG",
-    "classic_time_played": 0.17,
-    "speed_time_played": 0.95
+    "classic_time_played": 0.21,
+    "speed_time_played": 1.62
+  },
+  {
+    "username": "@bengbangkita",
+    "classic_time_played": 0,
+    "speed_time_played": 0.01
+  },
+  {
+    "username": "@Johnnycage4886",
+    "classic_time_played": 0,
+    "speed_time_played": 3.16
+  },
+  {
+    "username": "@MillyMillZz7",
+    "classic_time_played": 0,
+    "speed_time_played": 2.45
+  },
+  {
+    "username": "@satoricrypt",
+    "classic_time_played": 1.09,
+    "speed_time_played": 9.18
   }
 ]
